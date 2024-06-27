@@ -1,11 +1,7 @@
 import sensors
 
-try:
-    # first, try to import the base class from old versions of the Agent...
-    from checks import AgentCheck
-except ImportError:
-    # ...if the above failed, the check is running in Agent version 6 or later
-    from datadog_checks.checks import AgentCheck
+from datadog_checks.checks import AgentCheck
+
 
 class SensorsMon(AgentCheck):
 
@@ -14,6 +10,17 @@ class SensorsMon(AgentCheck):
         try:
             for chip in sensors.iter_detected_chips():
                 for feature in chip:
-                    self.gauge("sensors." + feature.label, feature.get_value(), device_name=('%s' % (chip)))
+                    if feature.label.startswith("Core"):
+                        self.gauge(
+                            "sensors.core",
+                            feature.get_value(),
+                            tags=[f"device:{chip}", f"core:{feature.label}"],
+                        )
+                    else:
+                        self.gauge(
+                            "sensors." + feature.label,
+                            feature.get_value(),
+                            tags=[f"device:{chip}"],
+                        )
         finally:
             sensors.cleanup()
